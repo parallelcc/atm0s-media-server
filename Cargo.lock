@@ -578,6 +578,7 @@ dependencies = [
  "futures",
  "local-ip-address",
  "log",
+ "rand 0.8.5",
  "serde",
  "serde_json",
  "udp_sas_async",

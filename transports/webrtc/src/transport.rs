@@ -56,6 +56,39 @@ where
     pkt_convert: MediaPacketConvert,
 }
 
+pub async fn listen_in_port_range(
+    port_max: u16,
+    port_min: u16,
+) -> Result<ComposeSocket, std::io::Error> {
+    if port_min == 0 && port_max == 0 {
+        return ComposeSocket::new(0).await;
+    }
+    let i = if port_min == 0 { 1 } else { port_min };
+    let j = if port_max == 0 { 0xFFFF } else { port_max };
+    if i > j {
+        return Err(std::io::Error::new(std::io::ErrorKind::InvalidInput, "port_min > port_max"));
+    }
+
+    let port_start = rand::random::<u16>() % (j - i + 1) + i;
+    let mut port_current = port_start;
+    loop {
+        match ComposeSocket::new(port_current).await {
+            Ok(c) => return Ok(c),
+            Err(err) => log::debug!("failed to listen port {}: {}", port_current, err),
+        };
+
+        port_current += 1;
+        if port_current > j {
+            port_current = i;
+        }
+        if port_current == port_start {
+            break;
+        }
+    }
+
+    Err(std::io::Error::new(std::io::ErrorKind::Other, "failed to listen any port"))
+}
+
 impl<L> WebrtcTransport<L>
 where
     L: TransportLifeCycle,
@@ -76,7 +109,7 @@ where
             .build();
         rtc.direct_api().enable_twcc_feedback();
 
-        let socket = ComposeSocket::new(0).await?;
+        let socket = listen_in_port_range(54990, 50010).await?;
 
         for (addr, proto) in socket.local_addrs() {
             log::info!("[TransportWebrtc] listen on {}::/{}", proto, addr);

@@ -118,7 +118,7 @@ impl WebrtcSsltcpListener {
         let async_socket = async_std::net::TcpListener::bind(addr).await?;
 
         Ok(Self {
-            local_addr: async_socket.local_addr().expect("Should has local port"),
+            local_addr: async_socket.local_addr()?,
             async_listener: async_socket,
             socket: None,
         })
